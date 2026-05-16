@@ -3,30 +3,29 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Gold search</title>
-  <link rel="stylesheet" href="css/Staile.css">
+  <title>Gold Search</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <main class="app">
     <section class="search-panel" aria-labelledby="page-title">
-      <div>
-        <p class="eyebrow">Web search</p>
-        <h1 id="page-title">Gold search</h1>
-      </div>
-
-      <form id="searchForm" class="search-form">
+      <p class="eyebrow">Web search</p>
+      <h1 id="page-title"><span>Gold</span> Search</h1>
+      <form id="searchForm" class="search-form" autocomplete="off">
         <label for="query">Search text</label>
         <div class="search-row">
-          <input id="query" name="query" type="search" placeholder="Type a topic" autocomplete="off" required>
-          <button type="submit">Search</button>
+          <input id="query" name="query" type="search"
+                 placeholder="Type a topic…" required>
+          <button type="submit" id="submitBtn">Search</button>
+          <a href="Histore.html">Histore</a>
         </div>
       </form>
     </section>
-
     <section class="status" id="status" aria-live="polite"></section>
     <section class="results" id="results" aria-label="Search results"></section>
   </main>
-
-  <script src="js/main.js?v=3"></script>
+  <script src="js/script.js"></script>
 </body>
 </html>

@@ -1,0 +1,43 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check JavaScript
+        run: |
+          node --check run_web.js
+          node --check public/run_web.js
+
+      - name: Check Python
+        run: python -m py_compile server.py WoreSearch/pyGetDate.py
+
+      - name: Upload project artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyGetDate
+          path: |
+            index.html
+            css/
+            js/
+            public/
+            WoreSearch/
+            Run_Web.bat
+            run_web.js
+            server.py

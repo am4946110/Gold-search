@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gold search</title>
+  <link rel="stylesheet" href="css/Staile.css">
+</head>
+<body>
+  <main class="app">
+    <section class="search-panel" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">Web search</p>
+        <h1 id="page-title">Gold search</h1>
+      </div>
+
+      <form id="searchForm" class="search-form">
+        <label for="query">Search text</label>
+        <div class="search-row">
+          <input id="query" name="query" type="search" placeholder="Type a topic" autocomplete="off" required>
+          <button type="submit">Search</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="status" id="status" aria-live="polite"></section>
+    <section class="results" id="results" aria-label="Search results"></section>
+  </main>
+
+  <script src="js/main.js"></script>
+</body>
+</html>

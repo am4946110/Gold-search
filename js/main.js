@@ -1,85 +1,167 @@
-const form = document.getElementById("searchForm");
-const queryInput = document.getElementById("query");
-const statusBox = document.getElementById("status");
-const resultsBox = document.getElementById("results");
-const submitButton = form.querySelector("button");
+/* ── DOM refs ──────────────────────────────────────────── */
+const form       = document.getElementById('searchForm');
+const queryInput = document.getElementById('query');
+const submitBtn  = document.getElementById('submitBtn');
+const statusEl   = document.getElementById('status');
+const resultsEl  = document.getElementById('results');
 
-form.addEventListener("submit", async (event) => {
-  event.preventDefault();
+/* ── Helpers ───────────────────────────────────────────── */
+function setStatus(type, html) {
+  statusEl.className = 'status ' + (type || '');
+  statusEl.innerHTML = html;
+}
 
-  const query = queryInput.value.trim();
-  if (!query) {
-    setStatus("Search text is required.", true);
+function clearResults() {
+  resultsEl.innerHTML = '';
+}
+
+function hostname(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch { return url; }
+}
+
+function escHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ── Safe JSON fetch ────────────────────────────────────── */
+/**
+ * Fetches a URL and parses JSON.
+ * Throws a descriptive Error if the server returns HTML or a non-JSON body,
+ * so the caller gets a useful message instead of a raw SyntaxError.
+ */
+async function fetchJSON(url) {
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (networkErr) {
+    // Network-level failure (server truly not running, CORS, etc.)
+    throw new Error('Cannot reach the server — is it running? (' + networkErr.message + ')');
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+
+  if (!contentType.includes('application/json')) {
+    // Server returned HTML (404 page, error page, redirect, etc.)
+    const preview = await res.text();
+    const hint    = preview.trim().slice(0, 120);
+    throw new Error(
+      `Server returned HTTP ${res.status} with non-JSON body.\n` +
+      `Content-Type: ${contentType}\n` +
+      `Body preview: ${hint}`
+    );
+  }
+
+  const data = await res.json();
+  return data;
+}
+
+/* ── Render results ─────────────────────────────────────── */
+function renderResults(data) {
+  clearResults();
+
+  const items = Array.isArray(data.results) ? data.results : [];
+
+  if (!items.length) {
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">✦</div>
+        <p>No results found. Try a different search term.</p>
+      </div>`;
     return;
   }
 
-  submitButton.disabled = true;
-  setStatus("Searching...");
-  resultsBox.replaceChildren();
+  /* header */
+  const header = document.createElement('div');
+  header.className = 'results-header';
+  header.innerHTML = `
+    <span class="count">${items.length}</span>
+    <span>result${items.length !== 1 ? 's' : ''} found</span>`;
+  resultsEl.appendChild(header);
+
+  /* cards */
+  items.forEach((item, i) => {
+    const card = document.createElement('a');
+    card.className = 'result-card';
+    card.href      = item.url || item.link || '#';
+    card.target    = '_blank';
+    card.rel       = 'noopener noreferrer';
+    card.style.animationDelay = (i * 45) + 'ms';
+
+    const src     = escHtml(hostname(item.url || item.link || ''));
+    const title   = escHtml(item.title   || 'Untitled');
+    const snippet = escHtml(item.snippet || item.description || item.body || '');
+    const url     = escHtml(item.url     || item.link || '');
+
+    card.innerHTML = `
+      <span class="result-index">${String(i + 1).padStart(2, '0')}</span>
+      ${src     ? `<p class="result-source">${src}</p>`     : ''}
+      <h2 class="result-title">${title}</h2>
+      ${snippet ? `<p class="result-snippet">${snippet}</p>` : ''}
+      ${url     ? `<p class="result-url">${url}</p>`         : ''}`;
+
+    resultsEl.appendChild(card);
+  });
+}
+
+/* ── Search ─────────────────────────────────────────────── */
+async function doSearch(query) {
+  submitBtn.classList.add('loading');
+  submitBtn.textContent = 'Searching…';
+  clearResults();
+  setStatus('', '<span class="spinner"></span> Searching for <em>' + escHtml(query) + '</em>…');
 
   try {
-    const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-    const contentType = response.headers.get("content-type") || "";
-    const responseText = await response.text();
+    const data = await fetchJSON('/api/search?' + new URLSearchParams({ q: query }));
 
-    if (!contentType.includes("application/json")) {
-      throw new Error("This page is open without the local Python API. Close this tab, run E:\\pyGetDate\\Run_Web.bat, then use the http://127.0.0.1/.../web page it opens. GitHub Pages, Live Server, and direct index.html cannot run Get_News.bat.");
+    if (data.ok) {
+      const n = Array.isArray(data.results) ? data.results.length : 0;
+      setStatus('ok',
+        `<span class="dot"></span> ${n} result${n !== 1 ? 's' : ''} for <em>${escHtml(query)}</em>`);
+      renderResults(data);
+    } else {
+      /* Server responded but reported a failure (bad bat output, timeout, etc.) */
+      const msg = data.error || 'Unknown server error';
+      setStatus('error', `<span class="dot"></span> ${escHtml(msg)}`);
+
+      /* Show extra debug info in console so you can fix the batch file */
+      if (data.stdout || data.stderr) {
+        console.group('Server debug info');
+        if (data.stdout) console.log('stdout:', data.stdout);
+        if (data.stderr) console.warn('stderr:', data.stderr);
+        console.groupEnd();
+      }
+
+      clearResults();
     }
-
-    const payload = JSON.parse(responseText);
-
-    if (!response.ok || !payload.ok) {
-      throw new Error(payload.error || "Search failed.");
-    }
-
-    renderResults(payload.results || []);
-    setStatus(`${payload.results.length} result${payload.results.length === 1 ? "" : "s"} found.`);
-  } catch (error) {
-    setStatus(error.message, true);
+  } catch (err) {
+    /* fetchJSON throws with a descriptive message — show it in the UI */
+    setStatus('error', `<span class="dot"></span> ${escHtml(err.message)}`);
+    console.error('[Gold Search] fetch error:', err);
+    clearResults();
   } finally {
-    submitButton.disabled = false;
+    submitBtn.classList.remove('loading');
+    submitBtn.textContent = 'Search';
   }
+}
+
+/* ── Form submit ────────────────────────────────────────── */
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const q = queryInput.value.trim();
+  if (q) doSearch(q);
 });
 
-function setStatus(message, isError = false) {
-  statusBox.textContent = message;
-  statusBox.classList.toggle("error", isError);
-}
-
-function renderResults(results) {
-  resultsBox.replaceChildren();
-
-  if (!results.length) {
-    setStatus("No results found.");
-    return;
+/* ── Restore query from URL on load ─────────────────────── */
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(location.search);
+  const q = params.get('q') || params.get('query');
+  if (q) {
+    queryInput.value = q;
+    doSearch(q);
   }
-
-  const fragment = document.createDocumentFragment();
-
-  results.forEach((item) => {
-    const article = document.createElement("article");
-    article.className = "result";
-
-    const title = document.createElement("h2");
-    const link = document.createElement("a");
-    link.href = item.link || "#";
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = item.title || "Untitled result";
-    title.appendChild(link);
-
-    const url = document.createElement("a");
-    url.href = item.link || "#";
-    url.target = "_blank";
-    url.rel = "noopener noreferrer";
-    url.textContent = item.link || "";
-
-    const snippet = document.createElement("p");
-    snippet.textContent = item.snippet || "";
-
-    article.append(title, url, snippet);
-    fragment.appendChild(article);
-  });
-
-  resultsBox.appendChild(fragment);
-}
+});

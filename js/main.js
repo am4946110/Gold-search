@@ -20,12 +20,13 @@ form.addEventListener("submit", async (event) => {
   try {
     const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
     const contentType = response.headers.get("content-type") || "";
+    const responseText = await response.text();
 
     if (!contentType.includes("application/json")) {
-      throw new Error("The page is not connected to the local API. Start it with Run_Web.bat and open the /web address.");
+      throw new Error("The page is not connected to the local API. Close this tab, run Run_Web.bat, and use the /web address it opens.");
     }
 
-    const payload = await response.json();
+    const payload = JSON.parse(responseText);
 
     if (!response.ok || !payload.ok) {
       throw new Error(payload.error || "Search failed.");

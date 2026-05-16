@@ -20,6 +20,10 @@ class NewsHandler(SimpleHTTPRequestHandler):
             self.handle_search(url.query)
             return
 
+        if url.path.startswith("/api/"):
+            self.write_json({"ok": False, "error": "API path not found.", "results": []}, 404)
+            return
+
         if url.path in ("/", "/web"):
             self.path = "/index.html"
 
@@ -69,8 +73,13 @@ class NewsHandler(SimpleHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(body)
+
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
 
 
 def start_server():

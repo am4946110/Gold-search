@@ -1,1 +1,1 @@
-require("./public/run_web");
+require("./scripts/run_web_node");

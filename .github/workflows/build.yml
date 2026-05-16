@@ -24,6 +24,7 @@ jobs:
       - name: Check JavaScript
         run: |
           node --check run_web.js
+          node --check scripts/run_web_node.js
           node --check public/run_web.js
 
       - name: Check Python
@@ -38,6 +39,7 @@ jobs:
             css/
             js/
             public/
+            scripts/
             WoreSearch/
             Run_Web.bat
             run_web.js

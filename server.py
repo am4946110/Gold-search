@@ -82,6 +82,50 @@ class NewsHandler(SimpleHTTPRequestHandler):
         super().end_headers()
 
 
+def handle_search(self, query_string):
+    params = parse_qs(query_string)
+    query = (params.get("q", [""])[0] or "").strip()
+
+    if not query:
+        self.write_json(
+            {"ok": False, "error": "Search text is required.", "results": []},
+            400,
+        )
+        return
+
+    try:
+        completed = subprocess.run(
+            [sys.executable, str(PYTHON_FILE), query],
+            cwd=str(ROOT),
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+
+    except subprocess.TimeoutExpired:
+        self.write_json(
+            {"ok": False, "error": "Search timed out.", "results": []},
+            504,
+        )
+        return
+
+    output = completed.stdout.strip()
+
+    try:
+        payload = json.loads(output)
+
+    except json.JSONDecodeError:
+        payload = {
+            "ok": False,
+            "error": "The Python script did not return valid JSON.",
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+            "results": [],
+        }
+
+    status = 200 if payload.get("ok") else 502
+    self.write_json(payload, status)
+
 def start_server():
     requested_port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
     should_open = "--open" in sys.argv

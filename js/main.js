@@ -23,7 +23,7 @@ form.addEventListener("submit", async (event) => {
     const responseText = await response.text();
 
     if (!contentType.includes("application/json")) {
-      throw new Error("The page is not connected to the local API. Close this tab, run Run_Web.bat, and use the /web address it opens.");
+      throw new Error("This page is open without the local Python API. Close this tab, run E:\\pyGetDate\\Run_Web.bat, then use the http://127.0.0.1/.../web page it opens. GitHub Pages, Live Server, and direct index.html cannot run Get_News.bat.");
     }
 
     const payload = JSON.parse(responseText);

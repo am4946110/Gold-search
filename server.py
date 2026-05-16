@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import subprocess
+import webbrowser
 
 
 ROOT = Path(__file__).resolve().parent
@@ -74,6 +75,7 @@ class NewsHandler(SimpleHTTPRequestHandler):
 
 def start_server():
     requested_port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    should_open = "--open" in sys.argv
     ports = [requested_port, 8080, 3000, 5000, 49152, 51000, 55000]
     seen = set()
 
@@ -88,7 +90,10 @@ def start_server():
             print(f"Port {port} is not available: {error}")
             continue
 
-        print(f"Open http://127.0.0.1:{port}/web")
+        url = f"http://127.0.0.1:{port}/web"
+        print(f"Open {url}")
+        if should_open:
+            webbrowser.open(url)
         server.serve_forever()
         return
 

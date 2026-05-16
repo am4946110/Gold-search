@@ -5,7 +5,7 @@ if (typeof require === "function" && typeof process !== "undefined") {
     const statusBox = document.getElementById("status");
 
     if (statusBox) {
-      statusBox.textContent = "Run ./Run_Web.bat. Browser JavaScript cannot start BAT files.";
+      statusBox.textContent = "./Run_Web.bat";
       statusBox.classList.add("error");
     }
   });

@@ -6,10 +6,13 @@ import os
 import sys
 import subprocess
 import webbrowser
+import sqlite3
+from datetime import datetime
 
 
 ROOT = Path(__file__).resolve().parent
 BAT_FILE = ROOT / "WoreSearch" / "Get_News.bat"
+DATABASE_FILE = ROOT / "search_results.db"
 
 
 class NewsHandler(SimpleHTTPRequestHandler):
@@ -18,6 +21,10 @@ class NewsHandler(SimpleHTTPRequestHandler):
 
         if url.path == "/api/search":
             self.handle_search(url.query)
+            return
+
+        if url.path == "/api/dates":
+            self.handle_get_dates()
             return
 
         if url.path.startswith("/api/"):
@@ -67,6 +74,92 @@ class NewsHandler(SimpleHTTPRequestHandler):
 
         status = 200 if payload.get("ok") else 502
         self.write_json(payload, status)
+
+    def handle_get_dates(self):
+        """Retrieve all search dates from the database in human-readable format"""
+        try:
+            if not DATABASE_FILE.exists():
+                self.write_json(
+                    {
+                        "ok": False,
+                        "error": "Database file not found.",
+                        "dates": []
+                    },
+                    404
+                )
+                return
+
+            connection = sqlite3.connect(str(DATABASE_FILE))
+            cursor = connection.cursor()
+
+            # Query all search dates ordered by most recent first
+            cursor.execute("""
+                SELECT id, query, search_date, result_count 
+                FROM searches 
+                ORDER BY search_date DESC
+            """)
+
+            rows = cursor.fetchall()
+            connection.close()
+
+            if not rows:
+                self.write_json(
+                    {
+                        "ok": True,
+                        "message": "No search history found.",
+                        "dates": []
+                    },
+                    200
+                )
+                return
+
+            # Format dates as human-readable
+            dates_list = []
+            for row in rows:
+                search_id, query, search_date, result_count = row
+                
+                try:
+                    # Parse the timestamp and format it
+                    dt = datetime.fromisoformat(search_date)
+                    formatted_date = dt.strftime("%b %d, %Y at %I:%M %p")
+                except (ValueError, TypeError):
+                    # If parsing fails, use the raw date
+                    formatted_date = str(search_date)
+
+                dates_list.append({
+                    "id": search_id,
+                    "query": query,
+                    "date": formatted_date,
+                    "result_count": result_count
+                })
+
+            self.write_json(
+                {
+                    "ok": True,
+                    "total_searches": len(dates_list),
+                    "dates": dates_list
+                },
+                200
+            )
+
+        except sqlite3.Error as error:
+            self.write_json(
+                {
+                    "ok": False,
+                    "error": f"Database error: {str(error)}",
+                    "dates": []
+                },
+                500
+            )
+        except Exception as error:
+            self.write_json(
+                {
+                    "ok": False,
+                    "error": f"Unexpected error: {str(error)}",
+                    "dates": []
+                },
+                500
+            )
 
     def write_json(self, payload, status=200):
         body = json.dumps(payload).encode("utf-8")

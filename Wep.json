@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "total_searches": 3,
+  "dates": [
+    {
+      "id": 3,
+      "query": "gold price today",
+      "date": "Jan 15, 2024 at 02:30 PM",
+      "result_count": 10
+    }
+  ]
+}
